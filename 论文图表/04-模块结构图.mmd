@@ -1,0 +1,37 @@
+flowchart LR
+    subgraph 前端["前端 SPA"]
+        direction TB
+        ROUTES["Vue Router 路由"]
+        STORE["Pinia Store<br/>auth.js"]
+        COMPONENTS["Vue 组件"]
+        API_CLIENT["Axios Client<br/>api/index.js"]
+    end
+
+    subgraph 后端["FastAPI 后端"]
+        direction TB
+        MAIN["main.py<br/>应用入口"]
+        ROUTERS["Routers 路由层"]
+        SERVICES["Services 业务逻辑"]
+        MIDDLEWARE["Middleware 中间件"]
+        MODELS["Models 数据模型"]
+        SCHEMAS["Schemas 校验"]
+    end
+
+    subgraph 外部["外部系统"]
+        BILI["B站 API<br/>爬虫数据源"]
+        REDIS[("Redis<br/>缓存可选")]
+    end
+
+    COMPONENTS -->|"dispatch"| STORE
+    STORE -->|"axios request"| API_CLIENT
+    API_CLIENT -->|"HTTP /api/*"| ROUTERS
+    ROUTES -->|"懒加载"| COMPONENTS
+
+    MAIN --> ROUTERS
+    MAIN --> MIDDLEWARE
+    ROUTERS --> SERVICES
+    SERVICES --> MODELS
+    MIDDLEWARE --> SCHEMAS
+
+    BILI -->|"Scrapy 采集"| MODELS
+    MODELS -.->|"可选缓存"| REDIS

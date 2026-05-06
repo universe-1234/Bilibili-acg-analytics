@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<title>B站ACG视频数据统计分析系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a1a;color:#e0e0e0;min-height:100vh}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#1a1a2e}
+::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+
+.app-header{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,26,0.95);backdrop-filter:blur(8px);border-bottom:1px solid #1a1a4e;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.app-header .logo{font-size:20px;font-weight:bold;color:#f472b6;cursor:pointer}
+.app-header nav{display:flex;gap:4px}
+.nav-link{padding:6px 14px;border-radius:8px;color:#a0a0b8;text-decoration:none;font-size:14px;transition:all 0.2s;cursor:pointer;border:none;background:none}
+.nav-link:hover{color:#e0e0f0;background:rgba(255,255,255,0.05)}
+.nav-link.active{color:#f472b6!important;background:rgba(244,114,182,0.1)}
+
+.nav-btn{padding:6px 16px;border-radius:8px;border:1px solid #2a2a4e;background:transparent;color:#a0a0b8;font-size:13px;cursor:pointer;transition:all 0.2s}
+.nav-btn:hover{border-color:#444;color:#e0e0e0}
+.nav-btn-primary{background:#f472b6;color:#fff;border-color:#f472b6}
+.nav-btn-primary:hover{background:#ec4899}
+
+.app-main{padding-top:88px;padding-bottom:32px;max-width:1400px;margin:0 auto;padding-left:24px;padding-right:24px;min-height:100vh}
+.page-section{display:none}
+
+.hero-banner{background:linear-gradient(135deg,#1a1040,#0f0f30,#1a1030);border-radius:16px;padding:40px;margin-bottom:32px;border:1px solid #1a1a4e}
+.hero-banner h2{font-size:28px;margin-bottom:8px;background:linear-gradient(90deg,#f472b6,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+.filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;align-items:center}
+.filter-bar input,.filter-bar select{padding:10px 14px;background:#12122a;border:1px solid #2a2a4e;border-radius:8px;color:#e0e0e0;font-size:14px;outline:none}
+.filter-bar input:focus,.filter-bar select:focus{border-color:#f472b6}
+.filter-bar input{flex:1;min-width:200px;max-width:360px}
+.filter-bar select{min-width:120px}
+.btn-search{padding:10px 20px;background:#f472b6;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}
+.btn-search:hover{background:#ec4899}
+.total-hint{color:#666;font-size:13px;margin-left:auto}
+
+.video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.video-card{background:#12122a;border-radius:12px;overflow:hidden;border:1px solid #1a1a3e;cursor:pointer;transition:all 0.3s}
+.video-card:hover{border-color:rgba(244,114,182,0.4);box-shadow:0 4px 20px rgba(244,114,182,0.1)}
+.video-card .cover{position:relative;aspect-ratio:16/9;overflow:hidden;background:#0a0a1a}
+.video-card .cover img{width:100%;height:100%;object-fit:cover;transition:transform 0.3s}
+.video-card:hover .cover img{transform:scale(1.05)}
+.video-card .dur{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.7);color:#fff;font-size:12px;padding:2px 6px;border-radius:4px}
+.video-card .cat-tag{position:absolute;top:8px;left:8px;background:rgba(244,114,182,0.8);color:#fff;font-size:11px;padding:2px 8px;border-radius:4px}
+.video-card .vinfo{padding:14px}
+.video-card .vinfo h3{font-size:14px;line-height:1.4;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.video-card .vinfo .author{font-size:12px;color:#888;margin-bottom:8px}
+.video-card .vstats{display:flex;gap:12px;font-size:12px;color:#666}
+
+#pagination{text-align:center;margin-top:24px}
+.page-btn{padding:6px 14px;margin:0 4px;border:1px solid #2a2a4e;background:#12122a;color:#aaa;border-radius:6px;cursor:pointer;font-size:13px;transition:all 0.2s}
+.page-btn:hover{border-color:#f472b6;color:#f472b6}
+.page-btn.active{background:#f472b6;border-color:#f472b6;color:#fff}
+
+.detail-layout{display:grid;grid-template-columns:1fr 360px;gap:32px}
+@media(max-width:900px){.detail-layout{grid-template-columns:1fr}}
+.player-area{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;margin-bottom:20px;cursor:pointer}
+.player-area img{width:100%;height:100%;object-fit:contain}
+.play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,0.6)}
+.play-overlay:hover{background:rgba(0,0,0,0.4)}
+
+.tag{padding:3px 10px;background:rgba(244,114,182,0.15);color:#f472b6;border-radius:12px;font-size:12px}
+
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.stat-card{background:linear-gradient(135deg,#12122a,#0f0f28);border-radius:12px;padding:16px;text-align:center;border:1px solid #1a1a4e}
+.stat-card .sval{font-size:22px;font-weight:bold;color:#f472b6}
+.stat-card .slbl{font-size:12px;color:#666;margin-top:4px}
+
+.desc-box{background:#12122a;border-radius:12px;padding:20px;margin-bottom:24px;border:1px solid #1a1a4e}
+.desc-box h3{margin-bottom:12px;font-size:16px}
+.desc-box p{color:#888;font-size:14px;line-height:1.6}
+
+.comment-box{background:#12122a;border-radius:12px;padding:20px;border:1px solid #1a1a4e}
+.comment-box h3{margin-bottom:16px}
+.comment-box textarea{width:100%;padding:12px;background:#0a0a1a;border:1px solid #2a2a4e;border-radius:8px;color:#e0e0e0;font-size:14px;resize:vertical;min-height:80px;outline:none;font-family:inherit}
+.comment-box textarea:focus{border-color:#f472b6}
+.comment-item{padding:14px 0;border-bottom:1px solid #1a1a3e}
+.comment-item .cuser{color:#f472b6;font-size:14px;font-weight:500}
+.comment-item .ctime{color:#555;font-size:12px;margin-left:8px}
+.comment-item .ctext{color:#bbb;font-size:14px;margin-top:6px}
+
+.related-card{background:#12122a;border-radius:8px;padding:12px;display:flex;gap:12px;margin-bottom:10px;cursor:pointer;border:1px solid #1a1a3e;transition:all 0.2s}
+.related-card:hover{border-color:rgba(244,114,182,0.3)}
+.related-card img{width:120px;height:72px;object-fit:cover;border-radius:4px;flex-shrink:0}
+.rel-info{min-width:0}
+.rel-title{font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:4px}
+.rel-author{color:#888;font-size:11px}
+.rel-plays{color:#666;font-size:11px;margin-top:2px}
+
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:20px}
+@media(max-width:768px){.chart-grid{grid-template-columns:1fr}}
+.chart-card{background:#12122a;border-radius:12px;padding:20px;border:1px solid #1a1a4e}
+.chart-card h3{font-size:16px;margin-bottom:16px;color:#ddd}
+.chart-box{height:320px;width:100%}
+
+.big-screen-wrap{min-height:calc(100vh - 88px);padding:10px 0}
+.screen-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:20px}
+.screen-header h1{font-size:32px;background:linear-gradient(90deg,#00d4ff,#f472b6,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.screen-clock{font-size:16px;color:#00d4ff;font-family:'Courier New',monospace;letter-spacing:2px;white-space:nowrap}
+.fullscreen-btn{background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);padding:6px 16px;border-radius:6px;cursor:pointer;font-size:14px;transition:all 0.3s;white-space:nowrap}
+.fullscreen-btn:hover{background:rgba(0,212,255,0.2);border-color:#00d4ff}
+/* Fullscreen mode */
+.big-screen-wrap:fullscreen{background:#0a0a1a;padding:20px 40px;overflow:auto}
+.big-screen-wrap:fullscreen .big-grid{height:calc(100vh - 100px)}
+.big-screen-wrap:fullscreen .screen-header{margin-bottom:8px}
+.big-screen-wrap:fullscreen .screen-header h1{font-size:28px}
+.big-grid{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:12px;height:calc(100vh - 180px)}
+@media(max-width:1100px){.big-grid{grid-template-columns:1fr;height:auto}}
+.big-col{display:flex;flex-direction:column;gap:12px}
+.big-card{background:rgba(15,15,35,0.8);border-radius:10px;padding:14px;border:1px solid #1a1a4e;flex:1}
+.big-card h3{font-size:14px;margin-bottom:8px;color:#ccc}
+.big-chart{height:180px;width:100%}
+.big-chart-lg{height:100%;width:100%;min-height:260px}
+
+.fav-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.login-prompt{text-align:center;padding:14px;background:#0a0a1a;border-radius:8px;color:#666;font-size:13px;margin-bottom:16px}
+.login-prompt a{color:#f472b6;text-decoration:none;cursor:pointer}
+/* Profile */
+.profile-wrap{max-width:800px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.profile-card{background:#12122a;border-radius:12px;padding:24px;border:1px solid #1a1a3e}
+.profile-header{display:flex;align-items:center;gap:24px}
+.avatar-section{position:relative;cursor:pointer;flex-shrink:0}
+.profile-avatar{width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #1a1a4e;background:#1a1a2e}
+.avatar-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;opacity:0;transition:opacity 0.3s}
+.avatar-section:hover .avatar-overlay{opacity:1}
+.profile-nickname-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.profile-nickname{font-size:22px;font-weight:600}
+.profile-meta{font-size:13px;color:#888;margin-top:4px;display:flex;align-items:center;gap:4px}
+.pf-input{background:#0a0a1a;border:1px solid #1a1a3e;color:#e0e0e0;padding:10px 14px;border-radius:8px;font-size:14px;outline:none;transition:border-color 0.3s}
+.pf-input:focus{border-color:#f472b6}
+.login-prompt a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <span class="logo" onclick="go('home')">B站ACG数据分析</span>
+  <nav>
+    <a class="nav-link active" data-page="home" onclick="go('home')">首页</a>
+    <a class="nav-link" data-page="dashboard" onclick="go('dashboard')">数据看板</a>
+    <a class="nav-link" data-page="bigscreen" onclick="go('bigscreen')">可视化大屏</a>
+    <a class="nav-link" id="fav-nav" data-page="favorites" onclick="go('favorites')" style="display:none">我的收藏</a>
+    <a class="nav-link" id="profile-nav" data-page="profile" onclick="go('profile')" style="display:none">个人中心</a>
+  </nav>
+  <div id="nav-auth">
+    <button class="nav-btn" onclick="location.href='/login.html'">登录</button>
+    <button class="nav-btn nav-btn-primary" onclick="location.href='/login.html'">注册</button>
+  </div>
+</header>
+
+<div class="app-main">
+
+<div class="page-section" id="pg-home">
+  <div class="hero-banner">
+    <h2>B站ACG视频数据统计与分析</h2>
+    <p style="color:#888;margin-top:8px">探索B站ACG频道热门视频数据，涵盖动画、漫画、游戏等多种类型。</p>
+    <div style="margin-top:16px;display:flex;gap:12px">
+      <button class="nav-btn nav-btn-primary" style="padding:10px 20px;font-size:15px" onclick="go('dashboard')">数据分析</button>
+      <button class="nav-btn" style="padding:10px 20px;font-size:15px" onclick="go('bigscreen')">可视化大屏</button>
+    </div>
+  </div>
+  <div class="filter-bar">
+    <input type="text" id="search-input" placeholder="搜索视频标题、作者、标签..." onkeyup="if(event.key==='Enter')doSearch()">
+    <select id="cat-select" onchange="doSearch()"><option value="">全部分类</option></select>
+    <select id="sort-select" onchange="doSearch()">
+      <option value="play_count">播放最多</option>
+      <option value="like_count">点赞最多</option>
+      <option value="danmaku_count">弹幕最多</option>
+      <option value="publish_date">最新发布</option>
+    </select>
+    <button class="btn-search" onclick="doSearch()">搜索</button>
+    <span class="total-hint" id="total-hint"></span>
+  </div>
+  <div class="video-grid" id="video-grid"></div>
+  <div id="pagination"></div>
+</div>
+
+<div class="page-section" id="pg-video">
+  <div class="detail-layout">
+    <div>
+      <div id="detail-content"></div>
+      <div class="comment-box" style="margin-top:24px">
+        <h3>评论 (<span id="cmt-count">0</span>)</h3>
+        <div id="cmt-login-hint" style="display:none"><div class="login-prompt">请<a href="/login.html">登录</a>后发表评论</div></div>
+        <div id="cmt-form"><textarea id="cmt-input" placeholder="写下你的评论..."></textarea>
+          <div style="text-align:right;margin-top:10px"><button class="nav-btn nav-btn-primary" onclick="doComment()">发表评论</button></div>
+        </div>
+        <div id="cmt-list" style="margin-top:16px"></div>
+      </div>
+    </div>
+    <div id="related-list"></div>
+  </div>
+</div>
+
+<div class="page-section" id="pg-dashboard">
+  <h2 style="font-size:24px;margin-bottom:24px">数据统计分析 — 深度洞察</h2>
+  <div class="stats-row" id="dash-stats"></div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>30日数据趋势</h3><div class="chart-box" id="ch-trend"></div></div>
+    <div class="chart-card"><h3>分类互动率分析</h3><div class="chart-box" id="ch-engage"></div></div>
+    <div class="chart-card"><h3>分类播放量对比</h3><div class="chart-box" id="ch-cat"></div></div>
+    <div class="chart-card"><h3>UP主影响力排行</h3><div class="chart-box" id="ch-auth"></div></div>
+    <div class="chart-card" style="grid-column:1/-1"><h3>热门视频数据表 (播放TOP20)</h3><div id="ch-table" style="overflow-x:auto"></div></div>
+    <div class="chart-card"><h3>热门标签</h3><div class="chart-box" id="ch-tags"></div></div>
+    <div class="chart-card"><h3>视频时长与播放分析</h3><div class="chart-box" id="ch-dur"></div></div>
+  </div>
+</div>
+
+<div class="page-section" id="pg-bigscreen">
+  <div class="big-screen-wrap">
+    <div class="screen-header">
+        <div class="screen-clock" id="screen-clock"></div>
+        <h1>B站ACG视频数据可视化大屏</h1>
+        <button class="fullscreen-btn" id="fs-btn" onclick="toggleFullscreen()" title="全屏">⛶ 全屏</button>
+      </div>
+    <div class="big-grid">
+      <div class="big-col">
+        <div class="big-card"><div class="stats-row" style="grid-template-columns:1fr 1fr" id="big-stats"></div></div>
+        <div class="big-card"><h3>视频分类占比</h3><div class="big-chart" id="big-pie"></div></div>
+        <div class="big-card"><h3>热门标签</h3><div class="big-chart" id="big-tags"></div></div>
+      </div>
+      <div class="big-col">
+        <div class="big-card" style="flex:2"><h3>视频播放量 TOP20</h3><div class="big-chart-lg" id="big-top20"></div></div>
+        <div class="big-card"><h3>30日数据趋势</h3><div class="big-chart" style="height:250px" id="big-trend"></div></div>
+      </div>
+      <div class="big-col">
+        <div class="big-card"><h3>UP主影响力排行</h3><div class="big-chart" id="big-auth"></div></div>
+        <div class="big-card"><h3>弹幕活跃度排行</h3><div class="big-chart" id="big-pub"></div></div>
+        <div class="big-card"><h3>互动数据雷达</h3><div class="big-chart" id="big-radar"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-section" id="pg-profile">
+  <div class="profile-wrap">
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="avatar-section" id="avatar-click-area">
+          <img id="profile-avatar" src="" alt="" class="profile-avatar">
+          <div class="avatar-overlay">📷 更换头像</div>
+          <input type="file" id="avatar-input" accept="image/*" style="display:none">
+        </div>
+        <div class="profile-info">
+          <div class="profile-nickname-row">
+            <span id="profile-nickname" class="profile-nickname"></span>
+            <button class="nav-btn" onclick="editNickname()" style="font-size:12px;padding:2px 8px">✏️ 编辑</button>
+          </div>
+          <div class="profile-meta">
+            <span>@</span><span id="profile-username"></span>
+            <span style="margin-left:16px">📧</span><span id="profile-email"></span>
+          </div>
+          <div class="profile-meta">
+            <span>📅</span><span id="profile-join"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <h3>📊 我的数据</h3>
+      <div class="stats-row" style="grid-template-columns:1fr 1fr 1fr;margin-top:12px">
+        <div class="stat-card"><div class="sval" id="stat-comments">-</div><div class="slbl">我的评论</div></div>
+        <div class="stat-card"><div class="sval" id="stat-favorites">-</div><div class="slbl">我的收藏</div></div>
+        <div class="stat-card"><div class="sval" id="stat-days">-</div><div class="slbl">加入天数</div></div>
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <h3>🔒 修改密码</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;max-width:400px;margin-top:12px">
+        <input type="password" id="old-pwd" class="pf-input" placeholder="原密码">
+        <input type="password" id="new-pwd" class="pf-input" placeholder="新密码（至少6位）">
+        <div style="display:flex;gap:8px">
+          <button class="nav-btn nav-btn-primary" onclick="changePassword()">修改密码</button>
+          <span id="pwd-msg" style="font-size:13px;align-self:center"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <h3>📋 近期操作</h3>
+      <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap">
+        <button class="nav-btn" onclick="go('favorites')">⭐ 我的收藏</button>
+        <button class="nav-btn" onclick="location.href='/login.html'">🚪 退出登录</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-section" id="pg-favorites">
+  <h2 style="font-size:24px;margin-bottom:24px">我的收藏</h2>
+  <div class="fav-grid" id="fav-grid"></div>
+</div>
+
+</div>
+
+<script src="/echarts.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+var token = localStorage.getItem('token') || '';
+var user = null;
+var curPage = null;
+var curVid = null;
+var navLock = false;
+
+// Home state
+var videos=[], vidTotal=0, vidPage=1;
+var sKeyword='', sCat='', sSort='play_count';
+
+// Detail
+var vdetail=null, comments=[], cmtTotal=0;
+
+// Charts
+var charts=[];
+
+// ====== API ======
+function api(method, path, body) {
+  var opts = { method: method, headers: {} };
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  return fetch('/api' + path, opts).then(function(r){
+    if (r.status===401) { doLogout(); throw new Error('Unauthorized'); }
+    if (!r.ok) return r.json().then(function(e){ throw new Error(e.detail||'Request failed'); });
+    return r.json();
+  });
+}
+
+// ====== AUTH ======
+function doLogout() {
+  token=''; user=null;
+  localStorage.removeItem('token');
+  toast('已退出登录');
+  go('home');
+}
+
+function refreshUI() {
+  var logged=!!token;
+  var na=document.getElementById('nav-auth');
+  var fn=document.getElementById('fav-nav');
+  var pn=document.getElementById('profile-nav');
+  if (logged && user) {
+    na.innerHTML = '<span style="color:#888;font-size:14px;margin-right:12px">' + esc(user.nickname||user.username) + '</span><button class="nav-btn" onclick="doLogout()">退出</button>';
+    if (fn) fn.style.display = '';
+    if (pn) pn.style.display = '';
+  } else {
+    na.innerHTML = '<button class="nav-btn" onclick="location.href=\'/login.html\'">登录</button><button class="nav-btn nav-btn-primary" onclick="location.href=\'/login.html\'">注册</button>';
+    if (fn) fn.style.display = 'none';
+    if (pn) pn.style.display = 'none';
+  }
+}
+
+function toast(msg) {
+  var t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 24px;background:#f472b6;color:#fff;border-radius:8px;z-index:9999;font-size:14px;box-shadow:0 4px 20px rgba(244,114,182,0.4)';
+  document.body.appendChild(t);
+  setTimeout(function(){t.remove();},2500);
+}
+
+function fm(n) {
+  if (!n) return '0';
+  if (n>=100000000) return (n/100000000).toFixed(1)+'亿';
+  if (n>=10000) return (n/10000).toFixed(1)+'万';
+  return Number(n).toLocaleString();
+}
+
+function esc(s) {
+  if (!s) return '';
+  var d=document.createElement('div');
+  d.textContent=s;
+  return d.innerHTML;
+}
+
+// ====== NAVIGATION ======
+function go(page, id) {
+  if (navLock) return;
+  if (page === curPage && !id) return;
+  navLock = true;
+
+  curPage = page;
+  if (page==='video' && id) curVid = id;
+
+  // Update hash (hashchange is guarded by navLock)
+  var newHash = (page==='video'&&id) ? 'video/'+id : page;
+  if (window.location.hash !== '#'+newHash) {
+    window.location.hash = newHash;
+  }
+
+  // Show target section, hide others
+  var ss=document.querySelectorAll('.page-section');
+  for (var i=0;i<ss.length;i++) ss[i].style.display='none';
+  var tgt=document.getElementById('pg-'+page);
+  if (tgt) tgt.style.display='block';
+
+  // Nav active
+  var nls=document.querySelectorAll('.nav-link');
+  for (var j=0;j<nls.length;j++) nls[j].classList.remove('active');
+  var na=document.querySelector('[data-page="'+page+'"]');
+  if (na) na.classList.add('active');
+
+  refreshUI();
+
+  // Load data
+  if (page==='home') { loadVids(); loadCats(); }
+  if (page==='video'&&id) { loadDetail(id); loadComments(id); loadRelated(id); }
+  if (page==='dashboard') { setTimeout(loadDash, 300); }
+  if (page==='bigscreen') { setTimeout(loadBig, 300); startClock(); }
+  else { stopClock(); }
+  if (page==='favorites') { loadFavs(); }
+  if (page==='profile') { loadProfile(); }
+
+  window.scrollTo(0,0);
+
+  // Release lock after hashchange fires
+  setTimeout(function(){ navLock = false; }, 50);
+}
+
+// Hash change handler (for browser back/forward)
+window.addEventListener('hashchange', function(){
+  if (navLock) return;
+  var h = window.location.hash.slice(1);
+  if (!h) { go('home'); return; }
+  if (h.indexOf('video/')===0) {
+    var vid = parseInt(h.split('/')[1]);
+    if (vid) go('video', vid);
+  } else {
+    go(h);
+  }
+});
+
+// ====== HOME ======
+function loadVids(p) {
+  p=p||1; vidPage=p;
+  var q='?page='+p+'&page_size=20&sort_by='+sSort;
+  if (sKeyword) q+='&keyword='+encodeURIComponent(sKeyword);
+  if (sCat) q+='&category='+encodeURIComponent(sCat);
+  api('GET','/videos'+q).then(function(d){
+    videos=d.items; vidTotal=d.total;
+    renderGrid();
+  }).catch(function(e){
+    document.getElementById('video-grid').innerHTML='<div style="text-align:center;padding:40px;color:#888">加载失败: '+e.message+'</div>';
+  });
+}
+
+function loadCats() {
+  api('GET','/videos/categories').then(function(d){
+    var s=document.getElementById('cat-select');
+    s.innerHTML='<option value="">全部分类</option>';
+    for (var i=0;i<d.length;i++) s.innerHTML+='<option value="'+d[i]+'">'+d[i]+'</option>';
+  }).catch(function(){});
+}
+
+function renderGrid() {
+  var h='';
+  for (var i=0;i<videos.length;i++) {
+    var v=videos[i];
+    h+='<div class="video-card" onclick="go(\'video\','+v.id+')">';
+    h+='<div class="cover"><img src="'+v.cover_url+'" alt="" loading="lazy"><span class="dur">'+v.duration+'</span><span class="cat-tag">'+(v.category||'ACG')+'</span></div>';
+    h+='<div class="vinfo"><h3>'+esc(v.title)+'</h3><div class="author">'+esc(v.author_name)+'</div>';
+    h+='<div class="vstats"><span>▶ '+fm(v.play_count)+'</span><span>💬 '+fm(v.danmaku_count)+'</span><span>👍 '+fm(v.like_count)+'</span></div></div></div>';
+  }
+  document.getElementById('video-grid').innerHTML=h||'<div style="text-align:center;padding:60px;color:#666;grid-column:1/-1">暂无视频数据</div>';
+  var th=document.getElementById('total-hint');
+  if (th) th.textContent='共 '+vidTotal+' 个视频';
+  var pg=document.getElementById('pagination');
+  if (vidTotal>20) {
+    var tp=Math.ceil(vidTotal/20), ph='';
+    // Prev button
+    if (vidPage>1) ph+='<button class="page-btn" onclick="loadVids('+(vidPage-1)+')">◀ 上一页</button>';
+    // First page + ellipsis
+    if (vidPage>4) { ph+='<button class="page-btn" onclick="loadVids(1)">1</button>'; if (vidPage>5) ph+='<span style="color:#555;margin:0 2px">...</span>'; }
+    // Window around current page
+    var start=Math.max(1, vidPage-3);
+    var end=Math.min(tp, vidPage+3);
+    for (var j=start;j<=end;j++) ph+='<button class="page-btn'+(j===vidPage?' active':'')+'" onclick="loadVids('+j+')">'+j+'</button>';
+    // Last page + ellipsis
+    if (end<tp-1) { ph+='<span style="color:#555;margin:0 2px">...</span>'; }
+    if (end<tp) ph+='<button class="page-btn" onclick="loadVids('+tp+')">'+tp+'</button>';
+    // Next button
+    if (vidPage<tp) ph+='<button class="page-btn" onclick="loadVids('+(vidPage+1)+')">下一页 ▶</button>';
+    pg.innerHTML=ph;
+  } else pg.innerHTML='';
+}
+
+function doSearch() {
+  sKeyword=document.getElementById('search-input').value;
+  sCat=document.getElementById('cat-select').value;
+  sSort=document.getElementById('sort-select').value;
+  loadVids(1);
+}
+
+// ====== DETAIL ======
+function loadDetail(id) {
+  api('GET','/videos/'+id).then(function(v){
+    vdetail=v;
+    renderDetail();
+  }).catch(function(){
+    document.getElementById('detail-content').innerHTML='<div style="text-align:center;padding:40px;color:#888">加载失败</div>';
+  });
+}
+
+function renderDetail() {
+  var v=vdetail, h='';
+  h+='<div class="player-area" onclick="window.open(\''+v.bilibili_url+'\',\'_blank\')">';
+  h+='<img src="'+v.cover_url+'" alt=""><div class="play-overlay"><div style="font-size:48px">▶️</div><div style="margin-top:12px">点击跳转B站播放</div></div></div>';
+  h+='<h2 style="font-size:22px;margin:16px 0 8px">'+esc(v.title)+'</h2>';
+  h+='<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px">';
+  h+='<span style="color:#f472b6">'+esc(v.author_name)+'</span><span style="color:#888">'+(v.category||'')+'</span><span style="color:#666">'+(v.publish_date||'').split('T')[0]+'</span>';
+  h+='<button class="nav-btn" onclick="toggleFav('+v.id+')">'+(v.is_favorited?'⭐ 已收藏':'☆ 收藏')+'</button>';
+  h+='<button class="nav-btn" onclick="window.open(\''+v.bilibili_url+'\',\'_blank\')">🔗 B站原视频</button></div>';
+  h+='<div class="stats-row">';
+  var ss=[['播放',fm(v.play_count)],['弹幕',fm(v.danmaku_count)],['点赞',fm(v.like_count)],['投币',fm(v.coin_count)],['收藏',fm(v.favorite_count)],['分享',fm(v.share_count)],['评论',fm(v.reply_count)]];
+  for (var i=0;i<ss.length;i++) h+='<div class="stat-card"><div class="sval">'+ss[i][1]+'</div><div class="slbl">'+ss[i][0]+'</div></div>';
+  h+='</div>';
+  if (v.tags) {
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">';
+    var ts=v.tags.split(',').filter(Boolean);
+    for (var j=0;j<ts.length;j++) h+='<span class="tag">'+ts[j].trim()+'</span>';
+    h+='</div>';
+  }
+  h+='<div class="desc-box"><h3>视频简介</h3><p>'+(v.description||'暂无简介')+'</p></div>';
+  document.getElementById('detail-content').innerHTML=h;
+}
+
+function toggleFav(id) {
+  if (!token) { toast('请先登录'); return; }
+  api('POST','/videos/'+id+'/favorite').then(function(r){
+    vdetail.is_favorited=r.favorited;
+    toast(r.favorited?'已收藏':'已取消收藏');
+    renderDetail();
+  }).catch(function(e){ toast(e.message); });
+}
+
+// ====== COMMENTS ======
+function loadComments(vid) {
+  api('GET','/videos/'+vid+'/comments?page=1&page_size=50').then(function(d){
+    comments=d.items; cmtTotal=d.total;
+    renderCmt();
+  }).catch(function(){});
+}
+
+function renderCmt() {
+  document.getElementById('cmt-count').textContent=cmtTotal;
+  var h='';
+  for (var i=0;i<comments.length;i++) {
+    var c=comments[i];
+    h+='<div class="comment-item"><span class="cuser">'+esc(c.nickname||c.username)+'</span><span class="ctime">'+(c.created_at||'').split('T')[0]+'</span><div class="ctext">'+esc(c.content)+'</div></div>';
+  }
+  document.getElementById('cmt-list').innerHTML=h||'<div style="text-align:center;padding:24px;color:#666">暂无评论</div>';
+  var fa=document.getElementById('cmt-form');
+  var lh=document.getElementById('cmt-login-hint');
+  if (fa) fa.style.display=token?'block':'none';
+  if (lh) lh.style.display=token?'none':'block';
+}
+
+function doComment() {
+  if (!token) { toast('请先登录'); return; }
+  var tx=document.getElementById('cmt-input').value.trim();
+  if (!tx) { toast('请输入评论内容'); return; }
+  api('POST','/videos/'+curVid+'/comments',{content:tx}).then(function(){
+    document.getElementById('cmt-input').value='';
+    toast('评论发表成功');
+    loadComments(curVid);
+  }).catch(function(e){ toast(e.message); });
+}
+
+// ====== RELATED ======
+function loadRelated(id) {
+  if (!vdetail||!vdetail.category) return;
+  api('GET','/videos?category='+encodeURIComponent(vdetail.category)+'&page_size=6&sort_by=play_count').then(function(d){
+    var rv=d.items.filter(function(v){return v.id!==id;}).slice(0,5);
+    var h='<h3 style="margin-bottom:16px">相关推荐</h3>';
+    for (var i=0;i<rv.length;i++) {
+      var v=rv[i];
+      h+='<div class="related-card" onclick="go(\'video\','+v.id+')">';
+      h+='<img src="'+v.cover_url+'" alt=""><div class="rel-info"><div class="rel-title">'+esc(v.title)+'</div><div class="rel-author">'+esc(v.author_name)+'</div><div class="rel-plays">'+fm(v.play_count)+' 播放</div></div></div>';
+    }
+    document.getElementById('related-list').innerHTML=h;
+  }).catch(function(){});
+}
+
+// ====== FAVORITES ======
+function loadFavs() {
+  if (!token) return;
+  api('GET','/user/favorites?page=1&page_size=100').then(function(d){
+    var h='';
+    for (var i=0;i<d.items.length;i++) {
+      var v=d.items[i];
+      h+='<div class="video-card" onclick="go(\'video\','+v.id+')"><div class="cover"><img src="'+v.cover_url+'" alt=""><span class="dur">'+v.duration+'</span></div><div class="vinfo"><h3>'+esc(v.title)+'</h3><div class="author">'+esc(v.author_name)+'</div></div></div>';
+    }
+    document.getElementById('fav-grid').innerHTML=h||'<div style="text-align:center;padding:80px;color:#666;grid-column:1/-1"><div style="font-size:48px">⭐</div><div style="margin:16px">还没有收藏</div><button class="nav-btn nav-btn-primary" onclick="go(\'home\')">去发现视频</button></div>';
+  }).catch(function(){});
+}
+
+// ====== PROFILE ======
+function loadProfile() {
+  if (!token) { go('home'); return; }
+  setupAvatarUpload();
+  api('GET','/auth/me').then(function(u){
+    user = u;
+    document.getElementById('profile-avatar').src = u.avatar_url || 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect fill="#1a1a2e" width="80" height="80"/><text fill="#666" x="40" y="44" text-anchor="middle" font-size="28">'+(u.nickname||u.username)[0]+'</text></svg>');
+    document.getElementById('profile-nickname').textContent = u.nickname || u.username;
+    document.getElementById('profile-username').textContent = u.username;
+    document.getElementById('profile-email').textContent = u.email;
+    document.getElementById('profile-join').textContent = (u.created_at||'').split('T')[0] + ' 加入';
+  }).catch(function(){});
+  api('GET','/auth/stats').then(function(s){
+    document.getElementById('stat-comments').textContent = s.comment_count;
+    document.getElementById('stat-favorites').textContent = s.favorite_count;
+    document.getElementById('stat-days').textContent = s.member_days;
+  }).catch(function(){});
+  document.getElementById('old-pwd').value = '';
+  document.getElementById('new-pwd').value = '';
+  document.getElementById('pwd-msg').textContent = '';
+}
+
+function setupAvatarUpload() {
+  var input = document.getElementById('avatar-input');
+  var area = document.getElementById('avatar-click-area');
+  if (!input || !area) return;
+  // Click avatar area to trigger file picker
+  area.onclick = function() { input.click(); };
+  // Handle file selection
+  input.onchange = function(e) {
+    var file = (e.target || input).files[0];
+    if (!file) return;
+    if (file.size > 5*1024*1024) { toast('图片不能超过5MB'); return; }
+    if (!file.type.match(/image\//)) { toast('请选择图片文件'); return; }
+    toast('处理中...');
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var img = new Image();
+      img.onload = function() {
+        // Crop to square and resize to 200x200
+        var sz = Math.min(img.width, img.height);
+        var sx = (img.width - sz) / 2;
+        var sy = (img.height - sz) / 2;
+        var c = document.createElement('canvas');
+        c.width = 200; c.height = 200;
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, 200, 200);
+        ctx.drawImage(img, sx, sy, sz, sz, 0, 0, 200, 200);
+        var dataUrl = c.toDataURL('image/jpeg', 0.8);
+        // Upload
+        api('PUT','/auth/profile', {avatar_url: dataUrl}).then(function(u){
+          user = u;
+          document.getElementById('profile-avatar').src = u.avatar_url;
+          refreshUI();
+          toast('头像已更新');
+        }).catch(function(err){ toast(err.message); });
+      };
+      img.onerror = function() { toast('图片加载失败'); };
+      img.src = ev.target.result;
+    };
+    reader.onerror = function() { toast('文件读取失败'); };
+    reader.readAsDataURL(file);
+  };
+}
+
+function editNickname() {
+  var nn = prompt('请输入新昵称', user.nickname || user.username);
+  if (!nn || nn.trim()==='') return;
+  nn = nn.trim();
+  api('PUT','/auth/profile', {nickname: nn}).then(function(u){
+    user = u;
+    document.getElementById('profile-nickname').textContent = u.nickname;
+    document.getElementById('profile-avatar').src = u.avatar_url || 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect fill="#1a1a2e" width="80" height="80"/><text fill="#666" x="40" y="44" text-anchor="middle" font-size="28">'+(u.nickname||u.username)[0]+'</text></svg>');
+    refreshUI();
+    toast('昵称已更新');
+  }).catch(function(e){ toast(e.message); });
+}
+
+function changePassword() {
+  var oldPwd = document.getElementById('old-pwd').value;
+  var newPwd = document.getElementById('new-pwd').value;
+  var msg = document.getElementById('pwd-msg');
+  if (!oldPwd || !newPwd) { msg.textContent = '请填写完整'; msg.style.color = '#f87171'; return; }
+  if (newPwd.length < 6) { msg.textContent = '新密码至少6位'; msg.style.color = '#f87171'; return; }
+  api('PUT','/auth/password', {old_password: oldPwd, new_password: newPwd}).then(function(r){
+    msg.textContent = r.message || '修改成功';
+    msg.style.color = '#34d399';
+    document.getElementById('old-pwd').value = '';
+    document.getElementById('new-pwd').value = '';
+  }).catch(function(e){ msg.textContent = e.message; msg.style.color = '#f87171'; });
+}
+
+// ====== CHARTS ======
+var COLORS=['#f472b6','#a78bfa','#60a5fa','#34d399','#fbbf24','#f87171','#818cf8','#2dd4bf','#fb923c','#a3e635'];
+
+function initChart(id, opt) {
+  var dom=document.getElementById(id);
+  if (!dom) return null;
+  dom.innerHTML='';
+  var c=echarts.init(dom);
+  c.setOption(opt);
+  charts.push(c);
+  return c;
+}
+
+function disposeAll() {
+  for (var i=0;i<charts.length;i++) {
+    try { charts[i].dispose(); } catch(e){}
+  }
+  charts=[];
+}
+
+function gridOpt() {
+  return {
+    tooltip:{backgroundColor:'#1a1a2e',borderColor:'#2a2a4e',textStyle:{color:'#e0e0e0'}},
+    grid:{left:'3%',right:'4%',bottom:'3%',containLabel:true}
+  };
+}
+
+function loadDash() {
+  if (typeof echarts==='undefined') { console.error('ECharts not available'); return; }
+  disposeAll();
+
+  // Overview KPIs with computed metrics
+  api('GET','/dashboard/overview').then(function(d){
+    var avgPlays = d.total_videos>0 ? Math.round(d.total_plays/d.total_videos) : 0;
+    var items=[
+      ['视频总数',d.total_videos],['用户总数',d.total_users],['评论总数',d.total_comments],
+      ['总播放量',fm(d.total_plays)],['总点赞数',fm(d.total_likes)],['总弹幕数',fm(d.total_danmaku)],
+      ['平均播放',fm(avgPlays)]
+    ];
+    var h='';
+    for (var i=0;i<items.length;i++) h+='<div class="stat-card"><div class="sval">'+items[i][1]+'</div><div class="slbl">'+items[i][0]+'</div></div>';
+    document.getElementById('dash-stats').innerHTML=h;
+  }).catch(function(e){ console.error(e); });
+
+  // Daily trends - area chart with gradient
+  api('GET','/dashboard/daily-trends?days=30').then(function(d){
+    initChart('ch-trend', Object.assign(gridOpt(), {
+      tooltip:{trigger:'axis',backgroundColor:'#1a1a2e',borderColor:'#2a2a4e',textStyle:{color:'#e0e0e0'}},
+      legend:{textStyle:{color:'#888'},top:0,data:['播放','点赞','弹幕']},
+      xAxis:{type:'category',data:d.map(function(x){return x.date.slice(5);}),axisLabel:{color:'#666',fontSize:10},boundaryGap:false},
+      yAxis:{type:'value',axisLabel:{color:'#666',formatter:fm},splitLine:{lineStyle:{color:'#1a1a2e'}}},
+      series:[
+        {name:'播放',type:'line',data:d.map(function(x){return x.plays;}),smooth:true,symbol:'none',lineStyle:{width:2},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(244,114,182,0.3)'},{offset:1,color:'rgba(244,114,182,0.02)'}])},color:'#f472b6'},
+        {name:'点赞',type:'line',data:d.map(function(x){return x.likes;}),smooth:true,symbol:'none',lineStyle:{width:2},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(96,165,250,0.3)'},{offset:1,color:'rgba(96,165,250,0.02)'}])},color:'#60a5fa'},
+        {name:'弹幕',type:'line',data:d.map(function(x){return x.danmaku;}),smooth:true,symbol:'none',lineStyle:{width:2},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(52,211,153,0.3)'},{offset:1,color:'rgba(52,211,153,0.02)'}])},color:'#34d399'}
+      ]
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // Engagement analysis - radar/bar chart per category
+  api('GET','/dashboard/engagement-analysis').then(function(d){
+    var cats=d.map(function(x){return x.category;});
+    var scores=d.map(function(x){return x.engagement_score;});
+    initChart('ch-engage', Object.assign(gridOpt(), {
+      tooltip:{trigger:'axis',backgroundColor:'#1a1a2e',borderColor:'#2a2a4e',textStyle:{color:'#e0e0e0'},formatter:function(p){return p[0].name+'<br/>互动指数: '+p[0].value;}},
+      xAxis:{type:'category',data:cats,axisLabel:{color:'#666',fontSize:10,rotate:30}},
+      yAxis:{type:'value',name:'互动指数',nameTextStyle:{color:'#888'},axisLabel:{color:'#666'},splitLine:{lineStyle:{color:'#1a1a2e'}}},
+      series:[{type:'bar',data:scores.map(function(v,i){return{value:v,itemStyle:{color:COLORS[i%COLORS.length],borderRadius:[4,4,0,0]}};}),label:{show:true,position:'top',color:'#aaa',fontSize:10}}]
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // Category avg plays comparison
+  api('GET','/dashboard/category-stats').then(function(d){
+    var rv=d.slice().sort(function(a,b){return b.avg_plays-a.avg_plays;});
+    initChart('ch-cat', Object.assign(gridOpt(), {
+      tooltip:{trigger:'axis',backgroundColor:'#1a1a2e',borderColor:'#2a2a4e',textStyle:{color:'#e0e0e0'},formatter:function(p){return p[0].name+'<br/>视频数: '+rv[p[0].dataIndex].count+'<br/>均播放: '+fm(p[0].value);}},
+      yAxis:{type:'category',data:rv.map(function(c){return c.category;}).reverse(),axisLabel:{color:'#aaa',fontSize:11},axisLine:{show:false},axisTick:{show:false}},
+      xAxis:{type:'value',axisLabel:{color:'#666',fontSize:10,formatter:fm},splitLine:{lineStyle:{color:'#1a1a2e'}}},
+      series:[{type:'bar',data:rv.map(function(c){return{value:c.avg_plays,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#f472b6'},{offset:1,color:'#a78bfa'}]),borderRadius:[0,4,4,0]}};}).reverse(),label:{show:true,position:'right',color:'#aaa',fontSize:10,formatter:function(p){return fm(p.value);}}}]
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // Author ranking
+  api('GET','/dashboard/author-ranking').then(function(d){
+    var ad=d.slice(0,15).reverse();
+    initChart('ch-auth', Object.assign(gridOpt(), {
+      tooltip:{trigger:'axis',backgroundColor:'#1a1a2e',borderColor:'#2a2a4e',textStyle:{color:'#e0e0e0'}},
+      yAxis:{type:'category',data:ad.map(function(a){return a.author;}),axisLabel:{color:'#aaa',fontSize:10},axisLine:{show:false},axisTick:{show:false}},
+      xAxis:{type:'value',axisLabel:{color:'#666',fontSize:10,formatter:fm},splitLine:{lineStyle:{color:'#1a1a2e'}}},
+      series:[{type:'bar',data:ad.map(function(a){return{value:a.total_plays,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#60a5fa'},{offset:1,color:'#818cf8'}]),borderRadius:[0,4,4,0]}};}),label:{show:true,position:'right',color:'#aaa',fontSize:10,formatter:function(p){return fm(p.value);}}}]
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // Top videos DATA TABLE (not chart - more useful for analysis)
+  api('GET','/dashboard/top-videos?limit=20').then(function(d){
+    var h='<table style=\"width:100%;border-collapse:collapse;font-size:13px\"><thead><tr style=\"color:#888;border-bottom:1px solid #1a1a4e\"><th style=\"padding:10px 8px;text-align:left\">#</th><th style=\"padding:10px 8px;text-align:left\">标题</th><th style=\"padding:10px 8px;text-align:right\">播放</th><th style=\"padding:10px 8px;text-align:right\">点赞</th><th style=\"padding:10px 8px;text-align:right\">弹幕</th><th style=\"padding:10px 8px;text-align:right\">点赞率</th><th style=\"padding:10px 8px;text-align:left\">UP主</th></tr></thead><tbody>';
+    for (var i=0;i<d.length;i++) {
+      var v=d[i];
+      var lr=v.play_count>0 ? (v.like_count/v.play_count*100).toFixed(1)+'%' : '-';
+      h+='<tr style=\"border-bottom:1px solid #12122a;cursor:pointer\" onclick=\"go(\'video\','+v.id+')\" onmouseover=\"this.style.background=\'#1a1a2e\'\" onmouseout=\"this.style.background=\'\'\"><td style=\"padding:8px;color:#666\">'+(i+1)+'</td><td style=\"padding:8px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\" title=\"'+esc(v.title)+'\">'+esc(v.title.slice(0,30)+(v.title.length>30?'...':''))+'</td><td style=\"padding:8px;text-align:right;color:#f472b6\">'+fm(v.play_count)+'</td><td style=\"padding:8px;text-align:right\">'+fm(v.like_count)+'</td><td style=\"padding:8px;text-align:right\">'+fm(v.danmaku_count)+'</td><td style=\"padding:8px;text-align:right;color:#34d399\">'+lr+'</td><td style=\"padding:8px;color:#888\">'+esc(v.author_name)+'</td></tr>';
+    }
+    h+='</tbody></table>';
+    document.getElementById('ch-table').innerHTML=h;
+  }).catch(function(e){ console.error(e); });
+
+  // Tag cloud
+  api('GET','/dashboard/tag-cloud').then(function(d){
+    var tt=d.slice(0,15);
+    initChart('ch-tags', Object.assign(gridOpt(), {
+      tooltip:{trigger:'axis',backgroundColor:'#1a1a2e',borderColor:'#2a2a4e',textStyle:{color:'#e0e0e0'}},
+      grid:{left:'3%',right:'10%',top:5,bottom:5,containLabel:true},
+      xAxis:{type:'value',axisLabel:{color:'#666',fontSize:10},splitLine:{lineStyle:{color:'#1a1a2e'}}},
+      yAxis:{type:'category',data:tt.map(function(t){return t.name;}).reverse(),axisLabel:{color:'#888',fontSize:11},axisLine:{show:false},axisTick:{show:false}},
+      series:[{type:'bar',data:tt.map(function(t,i){return{value:t.value,itemStyle:{color:COLORS[i%COLORS.length],borderRadius:[0,4,4,0]}};}).reverse()}]
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // Duration vs performance analysis
+  api('GET','/dashboard/duration-analysis').then(function(d){
+    initChart('ch-dur', Object.assign(gridOpt(), {
+      tooltip:{trigger:'axis',backgroundColor:'#1a1a2e',borderColor:'#2a2a4e',textStyle:{color:'#e0e0e0'}},
+      legend:{textStyle:{color:'#888'},top:0,data:['平均播放','平均点赞','视频数量']},
+      xAxis:{type:'category',data:d.map(function(x){return x.bucket;}),axisLabel:{color:'#aaa',fontSize:11}},
+      yAxis:[
+        {type:'value',name:'播放/点赞',nameTextStyle:{color:'#888'},axisLabel:{color:'#666',formatter:fm},splitLine:{lineStyle:{color:'#1a1a2e'}}},
+        {type:'value',name:'数量',nameTextStyle:{color:'#888'},axisLabel:{color:'#666'},splitLine:{show:false}}
+      ],
+      series:[
+        {name:'平均播放',type:'bar',data:d.map(function(x){return x.avg_plays;}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#f472b6'},{offset:1,color:'#a78bfa'}]),borderRadius:[4,4,0,0]},barGap:'30%'},
+        {name:'平均点赞',type:'bar',data:d.map(function(x){return x.avg_likes;}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#60a5fa'},{offset:1,color:'#34d399'}]),borderRadius:[4,4,0,0]}},
+        {name:'视频数量',type:'line',yAxisIndex:1,data:d.map(function(x){return x.count;}),smooth:true,symbol:'circle',symbolSize:8,lineStyle:{width:2,color:'#fbbf24'},itemStyle:{color:'#fbbf24'}}
+      ]
+    }));
+  }).catch(function(e){ console.error(e); });
+}
+
+// ====== FULLSCREEN & CLOCK ======
+var clockTimer = null;
+
+function updateClock() {
+  var el = document.getElementById('screen-clock');
+  if (!el) return;
+  var now = new Date();
+  var y = now.getFullYear();
+  var mo = ('0'+(now.getMonth()+1)).slice(-2);
+  var d = ('0'+now.getDate()).slice(-2);
+  var h = ('0'+now.getHours()).slice(-2);
+  var mi = ('0'+now.getMinutes()).slice(-2);
+  var s = ('0'+now.getSeconds()).slice(-2);
+  var weekdays = ['日','一','二','三','四','五','六'];
+  var w = weekdays[now.getDay()];
+  el.innerHTML = y+'-'+mo+'-'+d+' 星期'+w+' '+h+':'+mi+':'+s;
+}
+
+function startClock() {
+  if (clockTimer) return;
+  updateClock();
+  clockTimer = setInterval(updateClock, 1000);
+}
+
+function stopClock() {
+  if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+}
+
+function toggleFullscreen() {
+  var wrap = document.querySelector('.big-screen-wrap');
+  if (!wrap) return;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (wrap.requestFullscreen) { wrap.requestFullscreen(); }
+    else if (wrap.webkitRequestFullscreen) { wrap.webkitRequestFullscreen(); }
+    else if (wrap.msRequestFullscreen) { wrap.msRequestFullscreen(); }
+  } else {
+    if (document.exitFullscreen) { document.exitFullscreen(); }
+    else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+    else if (document.msExitFullscreen) { document.msExitFullscreen(); }
+  }
+}
+
+function updateFsBtn() {
+  var btn = document.getElementById('fs-btn');
+  if (!btn) return;
+  if (document.fullscreenElement) {
+    btn.innerHTML = '✕ 退出全屏';
+    btn.style.color = '#f87171';
+    btn.style.borderColor = 'rgba(248,113,113,0.3)';
+  } else {
+    btn.innerHTML = '⛶ 全屏';
+    btn.style.color = '#00d4ff';
+    btn.style.borderColor = 'rgba(0,212,255,0.3)';
+  }
+  // Resize charts after DOM reflow
+  setTimeout(function(){
+    for (var i=0;i<charts.length;i++) {
+      try { charts[i].resize(); } catch(e){}
+    }
+  }, 200);
+}
+
+document.addEventListener('fullscreenchange', updateFsBtn);
+document.addEventListener('webkitfullscreenchange', updateFsBtn);
+document.addEventListener('msfullscreenchange', updateFsBtn);
+
+function loadBig() {
+  if (typeof echarts==='undefined') { console.error('ECharts not available'); return; }
+  disposeAll();
+
+  var bc=['#00d4ff','#f472b6','#a78bfa','#34d399','#fbbf24','#f87171','#60a5fa','#818cf8','#2dd4bf','#fb923c','#e879f9','#4ade80'];
+
+  // Animated big-number KPI cards
+  api('GET','/dashboard/overview').then(function(d){
+    var avgEng=(d.total_plays>0?(d.total_likes/d.total_plays*100).toFixed(1):'0')+'%';
+    var items=[['总播放量',fm(d.total_plays),'#00d4ff'],['视频总数',d.total_videos,'#f472b6'],['总点赞',fm(d.total_likes),'#a78bfa'],['平均点赞率',avgEng,'#fbbf24']];
+    var h='';
+    for (var i=0;i<items.length;i++) h+='<div class="stat-card" style=\"border-color:'+items[i][2]+'44\"><div class="sval" style=\"color:'+items[i][2]+';font-size:20px;text-shadow:0 0 20px '+items[i][2]+'44\">'+items[i][1]+'</div><div class="slbl\">'+items[i][0]+'</div></div>';
+    document.getElementById('big-stats').innerHTML=h;
+  }).catch(function(e){ console.error(e); });
+
+  // Category rose/nightingale chart
+  api('GET','/dashboard/category-stats').then(function(d){
+    initChart('big-pie', Object.assign(gridOpt(), {
+      legend:{textStyle:{color:'#888',fontSize:9},bottom:0},
+      series:[{type:'pie',radius:['30%','75%'],roseType:'area',itemStyle:{borderRadius:4,borderColor:'#0f0f23',borderWidth:2},label:{color:'#aaa',fontSize:9},emphasis:{label:{fontSize:16,fontWeight:'bold'}},data:d.map(function(c){return{name:c.category,value:c.count};})}],
+      color:bc
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // Tag chart - vibrant glow style
+  api('GET','/dashboard/tag-cloud').then(function(d){
+    var tt=d.slice(0,12).reverse();
+    initChart('big-tags', Object.assign(gridOpt(), {
+      grid:{left:'3%',right:'12%',top:5,bottom:5,containLabel:true},
+      xAxis:{type:'value',axisLabel:{color:'#555',fontSize:9},splitLine:{lineStyle:{color:'#151530'}}},
+      yAxis:{type:'category',data:tt.map(function(t){return t.name;}),axisLabel:{color:'#aaa',fontSize:9},axisLine:{show:false},axisTick:{show:false}},
+      series:[{type:'bar',data:tt.map(function(t,i){return{value:t.value,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:bc[i%bc.length]},{offset:1,color:bc[(i+1)%bc.length]}]),borderRadius:[0,3,3,0]}};}),label:{show:true,position:'right',color:'#888',fontSize:9}}]
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // Top 20 - tall vertical showcase
+  api('GET','/dashboard/top-videos?limit=20').then(function(d){
+    var td=d.slice().reverse();
+    initChart('big-top20', Object.assign(gridOpt(), {
+      grid:{left:'2%',right:'14%',top:10,bottom:5,containLabel:true},
+      yAxis:{type:'category',data:td.map(function(v){return v.title.slice(0,12)+(v.title.length>12?'...':'');}),axisLabel:{color:'#aaa',fontSize:9},axisLine:{show:false},axisTick:{show:false},inverse:true},
+      xAxis:{type:'value',axisLabel:{color:'#888',fontSize:9,formatter:fm},splitLine:{lineStyle:{color:'#151530'}}},
+      series:[{type:'bar',data:td.map(function(v,i){return{value:v.play_count,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:bc[i%bc.length]},{offset:1,color:'#00d4ff'}]),borderRadius:[0,4,4,0]}};}),label:{show:true,position:'right',color:'#aaa',fontSize:9,formatter:function(p){return fm(p.value);}}}]
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // 30-day trend - smooth area with gradient
+  api('GET','/dashboard/daily-trends?days=30').then(function(d){
+    initChart('big-trend', Object.assign(gridOpt(), {
+      grid:{left:'5%',right:'5%',top:20,bottom:5,containLabel:true},
+      legend:{textStyle:{color:'#888',fontSize:9},top:0,data:['播放','点赞','弹幕']},
+      xAxis:{type:'category',data:d.map(function(x){return x.date.slice(5);}),axisLabel:{color:'#555',fontSize:8},boundaryGap:false},
+      yAxis:{type:'value',axisLabel:{color:'#555',fontSize:8,formatter:fm},splitLine:{lineStyle:{color:'#151530'}}},
+      series:[
+        {name:'播放',type:'line',data:d.map(function(x){return x.plays;}),smooth:true,symbol:'none',lineStyle:{width:2},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,212,255,0.35)'},{offset:1,color:'rgba(0,212,255,0.02)'}])},color:'#00d4ff'},
+        {name:'点赞',type:'line',data:d.map(function(x){return x.likes;}),smooth:true,symbol:'none',lineStyle:{width:2},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(244,114,182,0.3)'},{offset:1,color:'rgba(244,114,182,0.02)'}])},color:'#f472b6'},
+        {name:'弹幕',type:'line',data:d.map(function(x){return x.danmaku;}),smooth:true,symbol:'none',lineStyle:{width:2},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(52,211,153,0.3)'},{offset:1,color:'rgba(52,211,153,0.02)'}])},color:'#34d399'}
+      ]
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // Author ranking - golden glow style
+  api('GET','/dashboard/author-ranking').then(function(d){
+    var ad=d.slice(0,10).reverse();
+    initChart('big-auth', Object.assign(gridOpt(), {
+      grid:{left:'3%',right:'12%',top:5,bottom:5,containLabel:true},
+      yAxis:{type:'category',data:ad.map(function(a){return a.author;}),axisLabel:{color:'#aaa',fontSize:9},axisLine:{show:false},axisTick:{show:false}},
+      xAxis:{type:'value',axisLabel:{color:'#555',fontSize:8,formatter:fm},splitLine:{lineStyle:{color:'#151530'}}},
+      series:[{type:'bar',data:ad.map(function(a){return{value:a.total_plays,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#f97316'},{offset:1,color:'#fbbf24'}]),borderRadius:[0,3,3,0]}};}),label:{show:true,position:'right',color:'#fbbf24',fontSize:9,formatter:function(p){return fm(p.value);}}}]
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // Danmaku volume ranking — raw counts, more visually impactful
+  api('GET','/dashboard/engagement-analysis').then(function(d){
+    var sorted=d.slice().sort(function(a,b){return b.total_danmaku-a.total_danmaku;}).slice(0,12).reverse();
+    initChart('big-pub', Object.assign(gridOpt(), {
+      grid:{left:'3%',right:'18%',top:5,bottom:5,containLabel:true},
+      yAxis:{type:'category',data:sorted.map(function(x){return x.category;}),axisLabel:{color:'#aaa',fontSize:9},axisLine:{show:false},axisTick:{show:false}},
+      xAxis:{type:'value',axisLabel:{color:'#555',fontSize:8,formatter:fm},splitLine:{lineStyle:{color:'#151530'}}},
+      series:[{type:'bar',data:sorted.map(function(x,i){return{value:x.total_danmaku,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#00d4ff'},{offset:1,color:'#34d399'}]),borderRadius:[0,3,3,0]}};}),label:{show:true,position:'right',color:'#aaa',fontSize:9,formatter:function(p){return fm(p.value);}}}]
+    }));
+  }).catch(function(e){ console.error(e); });
+
+  // Engagement radar - multi-dimensional
+  api('GET','/dashboard/video-engagement').then(function(d){
+    var t={plays:0,likes:0,danmaku:0,favorites:0,shares:0,coins:0};
+    for (var i=0;i<d.length;i++){t.plays+=d[i].plays;t.likes+=d[i].likes;t.danmaku+=d[i].danmaku;t.favorites+=d[i].favorites;t.shares+=d[i].shares;t.coins+=d[i].coins;}
+    initChart('big-radar', Object.assign(gridOpt(), {
+      radar:{center:['50%','50%'],radius:'60%',shape:'polygon',splitNumber:4,
+        axisName:{color:'#888',fontSize:9,borderRadius:3,padding:[3,5]},
+        indicator:[{name:'播放',max:t.plays},{name:'点赞',max:t.likes},{name:'弹幕',max:t.danmaku},{name:'收藏',max:t.favorites},{name:'分享',max:t.shares},{name:'投币',max:t.coins}],
+        splitArea:{areaStyle:{color:['rgba(0,212,255,0.02)','rgba(0,212,255,0.04)','rgba(0,212,255,0.02)','rgba(0,212,255,0.04)']}},
+        splitLine:{lineStyle:{color:'rgba(0,212,255,0.15)'}},
+        axisLine:{lineStyle:{color:'rgba(255,255,255,0.1)'}}},
+      series:[{type:'radar',data:[{value:[t.plays,t.likes,t.danmaku,t.favorites,t.shares,t.coins],name:'总互动',areaStyle:{color:'rgba(244,114,182,0.25)'},itemStyle:{color:'#f472b6'},lineStyle:{color:'#f472b6',width:2}}]}]
+    }));
+  }).catch(function(e){ console.error(e); });
+}
+
+// ====== INIT ======
+if (token) {
+  api('GET','/auth/me').then(function(u){
+    user=u;
+    refreshUI();
+  }).catch(function(){ doLogout(); });
+}
+go('home');
+
+// Export
+window.go=go;
+window.doSearch=doSearch;
+window.doComment=doComment;
+window.loadVids=loadVids;
+window.toggleFav=toggleFav;
+window.doLogout=doLogout;
+
+})();
+</script>
+</body>
+</html>

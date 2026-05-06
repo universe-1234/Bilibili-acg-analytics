@@ -1,0 +1,23 @@
+flowchart LR
+    START([用户访问]) --> LOGIN{已登录?}
+    LOGIN -->|否| AUTH[登录/注册<br/>JWT认证]
+    AUTH --> HOME
+    LOGIN -->|是| HOME
+
+    HOME[首页<br/>视频列表] --> SEARCH[搜索/筛选/排序]
+    SEARCH --> HOME
+    HOME --> DETAIL[视频详情<br/>数据/标签/B站链接]
+
+    DETAIL --> FAV[收藏/取消]
+    DETAIL --> COMMENT[评论/回复]
+
+    HOME --> DASHBOARD[数据看板<br/>7个分析图表]
+    HOME --> BIGSCREEN[可视化大屏<br/>全屏/实时时钟]
+    HOME --> PROFILE[个人中心<br/>头像/密码/统计]
+
+    DASHBOARD --> LOGOUT{退出?}
+    BIGSCREEN --> LOGOUT
+    PROFILE --> LOGOUT
+
+    LOGOUT -->|是| END([返回登录页])
+    LOGOUT -->|否| HOME

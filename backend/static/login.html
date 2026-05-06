@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 - B站ACG数据分析系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#0a0a1a,#1a1040,#0a0a2e);color:#e0e0e0;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{width:420px;padding:40px;background:rgba(18,18,42,0.95);border-radius:16px;border:1px solid #1a1a4e;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.card h1{text-align:center;color:#f472b6;font-size:24px;margin-bottom:6px}
+.card .sub{text-align:center;color:#888;font-size:14px;margin-bottom:28px}
+.input-group{margin-bottom:16px}
+.input-group label{display:block;color:#aaa;font-size:13px;margin-bottom:6px}
+.input-group input{width:100%;padding:12px 16px;background:#0a0a1a;border:1px solid #2a2a4e;border-radius:8px;color:#fff;font-size:15px;outline:none;transition:border-color 0.2s}
+.input-group input:focus{border-color:#f472b6}
+.btn{width:100%;padding:12px;background:#f472b6;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;font-weight:600;transition:all 0.2s}
+.btn:hover{background:#ec4899}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-outline{background:transparent;border:1px solid #f472b6;color:#f472b6;margin-top:8px}
+.btn-outline:hover{background:rgba(244,114,182,0.1)}
+.msg{margin-top:12px;text-align:center;font-size:14px;padding:8px;border-radius:6px}
+.msg-error{color:#fca5a5;background:rgba(220,38,38,0.15)}
+.msg-ok{color:#6ee7b7;background:rgba(5,150,105,0.15)}
+.links{text-align:center;margin-top:20px;color:#888;font-size:13px}
+.links a{color:#f472b6;text-decoration:none;cursor:pointer}
+.links a:hover{text-decoration:underline}
+#regFields{display:none}
+.hint{text-align:center;color:#666;font-size:12px;margin-top:12px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1 id="formTitle">🎬 用户登录</h1>
+  <p class="sub" id="formSub">B站ACG视频数据分析系统</p>
+
+  <div class="msg" id="msgBox" style="display:none"></div>
+
+  <div id="regFields">
+    <div class="input-group">
+      <label>邮箱</label>
+      <input type="email" id="email" placeholder="请输入邮箱">
+    </div>
+    <div class="input-group">
+      <label>昵称（选填）</label>
+      <input type="text" id="nickname" placeholder="给自己起个名字">
+    </div>
+  </div>
+
+  <div class="input-group">
+    <label>用户名</label>
+    <input type="text" id="username" placeholder="请输入用户名" value="admin">
+  </div>
+  <div class="input-group">
+    <label>密码</label>
+    <input type="password" id="password" placeholder="请输入密码" value="admin123">
+  </div>
+  <div class="input-group" id="confirmPwdGroup" style="display:none">
+    <label>确认密码</label>
+    <input type="password" id="confirmPassword" placeholder="请再次输入密码">
+  </div>
+
+  <button class="btn" id="submitBtn" onclick="handleSubmit()">登 录</button>
+  <button class="btn btn-outline" id="toggleBtn" onclick="toggleMode()">切换到注册</button>
+
+  <div class="links" id="switchText">
+    还没有账号？<a onclick="toggleMode()">立即注册</a>
+  </div>
+  <div class="hint">测试账号: admin / admin123</div>
+</div>
+
+<script>
+var isLogin = true;
+
+function toggleMode() {
+  isLogin = !isLogin;
+  document.getElementById('formTitle').textContent = isLogin ? '🎬 用户登录' : '🎬 创建账号';
+  document.getElementById('formSub').textContent = isLogin ? 'B站ACG视频数据分析系统' : '加入B站ACG数据分析社区';
+  document.getElementById('submitBtn').textContent = isLogin ? '登 录' : '注 册';
+  document.getElementById('toggleBtn').textContent = isLogin ? '切换到注册' : '切换到登录';
+  document.getElementById('regFields').style.display = isLogin ? 'none' : 'block';
+  document.getElementById('confirmPwdGroup').style.display = isLogin ? 'none' : 'block';
+  document.getElementById('switchText').innerHTML = isLogin
+    ? '还没有账号？<a onclick="toggleMode()">立即注册</a>'
+    : '已有账号？<a onclick="toggleMode()">立即登录</a>';
+  hideMsg();
+}
+
+function showMsg(text, isError) {
+  var box = document.getElementById('msgBox');
+  box.textContent = text;
+  box.style.display = 'block';
+  box.className = 'msg ' + (isError ? 'msg-error' : 'msg-ok');
+}
+
+function hideMsg() {
+  document.getElementById('msgBox').style.display = 'none';
+}
+
+async function handleSubmit() {
+  hideMsg();
+  var username = document.getElementById('username').value.trim();
+  var password = document.getElementById('password').value.trim();
+
+  if (!username || !password) {
+    showMsg('请输入用户名和密码', true);
+    return;
+  }
+
+  if (!isLogin) {
+    var email = document.getElementById('email').value.trim();
+    var nickname = document.getElementById('nickname').value.trim();
+    var confirmPassword = document.getElementById('confirmPassword').value.trim();
+
+    if (!email) { showMsg('请输入邮箱', true); return; }
+    if (password !== confirmPassword) { showMsg('两次输入的密码不一致', true); return; }
+    if (password.length < 6) { showMsg('密码长度至少6位', true); return; }
+  }
+
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '处理中...';
+
+  var url = isLogin ? '/api/auth/login' : '/api/auth/register';
+  var body = isLogin
+    ? { username: username, password: password }
+    : { username: username, password: password, email: email, nickname: nickname || username };
+
+  try {
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    var data = await res.json();
+
+    if (res.ok) {
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      showMsg((isLogin ? '登录' : '注册') + '成功！正在跳转...', false);
+      setTimeout(function() { window.location.href = '/'; }, 800);
+    } else {
+      showMsg(data.detail || '操作失败', true);
+    }
+  } catch (err) {
+    showMsg('网络错误: ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = isLogin ? '登 录' : '注 册';
+  }
+}
+
+// Enter key to submit
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') handleSubmit();
+});
+</script>
+</body>
+</html>

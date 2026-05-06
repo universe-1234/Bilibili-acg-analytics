@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Test</title>
+  <style>
+    body { font-family: sans-serif; max-width: 400px; margin: 100px auto; background: #0a0a1a; color: #eee; }
+    input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #333; border-radius: 6px; background: #1a1a2e; color: #fff; font-size: 16px; box-sizing: border-box; }
+    button { width: 100%; padding: 12px; margin: 12px 0; background: #f472b6; color: #fff; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
+    button:hover { background: #ec4899; }
+    #result { margin-top: 16px; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; white-space: pre-wrap; }
+    .success { background: #064e3b; color: #6ee7b7; }
+    .error { background: #450a0a; color: #fca5a5; }
+  </style>
+</head>
+<body>
+  <h2>🔧 登录测试页（绕过 Vue）</h2>
+  <p style="color:#888;font-size:14px">如果这个页面能登录，说明问题在 Vue 框架层</p>
+  <input id="username" type="text" placeholder="用户名" value="admin">
+  <input id="password" type="password" placeholder="密码" value="admin123">
+  <button onclick="testLogin()">测试登录</button>
+  <div id="result"></div>
+
+  <script>
+    async function testLogin() {
+      const username = document.getElementById('username').value
+      const password = document.getElementById('password').value
+      const resultEl = document.getElementById('result')
+      resultEl.textContent = '请求中...'
+      resultEl.className = ''
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        })
+        const data = await res.json()
+        if (res.ok) {
+          resultEl.textContent = '✅ 登录成功!\n' + JSON.stringify(data, null, 2)
+          resultEl.className = 'success'
+        } else {
+          resultEl.textContent = '❌ 登录失败\n' + JSON.stringify(data, null, 2)
+          resultEl.className = 'error'
+        }
+      } catch (err) {
+        resultEl.textContent = '❌ 网络错误: ' + err.message
+        resultEl.className = 'error'
+      }
+    }
+  </script>
+</body>
+</html>

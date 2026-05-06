@@ -1,0 +1,27 @@
+graph TB
+    subgraph UI["表现层 Presentation"]
+        WEB["Vue 3 + Element Plus + ECharts<br/>Hash 路由 SPA"]
+    end
+
+    subgraph BUSINESS["业务层 Business"]
+        M1["用户管理<br/>注册登录 / 个人中心"]
+        M2["视频浏览<br/>搜索筛选 / 排序分页"]
+        M3["用户互动<br/>评论回复 / 收藏管理"]
+        M4["数据分析<br/>数据看板 / 可视化大屏"]
+    end
+
+    subgraph SERVICE["服务层 Service"]
+        API["RESTful API<br/>FastAPI 路由模块"]
+        AUTH["认证中间件<br/>JWT HS256 + bcrypt"]
+    end
+
+    subgraph DATA["数据层 Data"]
+        ORM["SQLAlchemy ORM<br/>5 张数据表映射"]
+        DB[("SQLite<br/>数据库")]
+        CRAWLER["Scrapy 爬虫<br/>B站热门 API"]
+    end
+
+    UI --> BUSINESS
+    BUSINESS --> SERVICE
+    SERVICE --> DATA
+    CRAWLER --> DB

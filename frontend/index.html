@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>B站ACG视频数据统计分析系统</title>
+  </head>
+  <body class="bg-gray-950 text-white">
+    <div id="app">
+      <div style="color:red;padding:20px;font-size:20px;text-align:center;margin-top:100px">
+        ⚠️ Vue 未加载 — 如果你看到这段文字，说明 Vue 应用没有挂载成功
+      </div>
+    </div>
+    <script>
+      console.log('=== HTML page loaded ===')
+      window.addEventListener('error', function(e) {
+        console.error('=== GLOBAL ERROR:', e.message, e.filename, e.lineno)
+      })
+    </script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

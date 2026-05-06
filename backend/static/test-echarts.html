@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ECharts 测试</title>
+<style>
+body { background: #0a0a1a; color: #fff; font-family: sans-serif; padding: 40px; }
+.info { margin-bottom: 16px; font-size: 18px; }
+.chart { width: 800px; height: 400px; background: #12122a; border-radius: 12px; border: 1px solid #1a1a4e; margin-bottom: 20px; }
+.green { color: #34d399; }
+.red { color: #f87171; }
+</style>
+</head>
+<body>
+<h1>ECharts 诊断测试</h1>
+<div id="info" class="info"></div>
+<div id="chart1" class="chart"></div>
+<div id="chart2" class="chart"></div>
+
+<script src="/echarts.min.js"></script>
+<script>
+var info = document.getElementById('info');
+
+// Test 1: Is echarts available?
+if (typeof echarts === 'undefined') {
+  info.innerHTML = '<span class="red">❌ echarts 未定义 — echarts.min.js 加载失败</span>';
+} else {
+  info.innerHTML = '<span class="green">✅ echarts 已加载，版本: ' + echarts.version + '</span>';
+
+  // Test 2: Can we init a chart?
+  try {
+    var dom1 = document.getElementById('chart1');
+    var c1 = echarts.init(dom1);
+    c1.setOption({
+      title: { text: '测试图表1 - 柱状图', left: 'center', textStyle: { color: '#fff' } },
+      tooltip: {},
+      xAxis: { data: ['A','B','C','D','E'], axisLabel: { color: '#888' } },
+      yAxis: { axisLabel: { color: '#888' } },
+      series: [{ type: 'bar', data: [5, 20, 36, 10, 10], itemStyle: { color: '#f472b6' } }]
+    });
+    info.innerHTML += '<br><span class="green">✅ 图表1 初始化成功</span>';
+  } catch(e) {
+    info.innerHTML += '<br><span class="red">❌ 图表1 失败: ' + e.message + '</span>';
+  }
+
+  // Test 3: API data
+  fetch('/api/dashboard/overview')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      info.innerHTML += '<br><span class="green">✅ API /dashboard/overview 返回: ' + d.total_videos + ' 视频, ' + fmtNum(d.total_plays) + ' 播放</span>';
+
+      var dom2 = document.getElementById('chart2');
+      var c2 = echarts.init(dom2);
+      c2.setOption({
+        title: { text: '测试图表2 - 饼图 (API数据)', left: 'center', textStyle: { color: '#fff' } },
+        tooltip: {},
+        series: [{ type: 'pie', radius: ['30%','60%'], data: [
+          { name: '视频', value: d.total_videos },
+          { name: '用户', value: d.total_users },
+          { name: '评论', value: d.total_comments }
+        ], label: { color: '#aaa' } }]
+      });
+      info.innerHTML += '<br><span class="green">✅ 图表2 (API数据) 初始化成功</span>';
+    })
+    .catch(function(e) {
+      info.innerHTML += '<br><span class="red">❌ API 请求失败: ' + e.message + '</span>';
+    });
+}
+
+function fmtNum(n) {
+  if (!n) return '0';
+  if (n >= 100000000) return (n/100000000).toFixed(1) + '亿';
+  if (n >= 10000) return (n/10000).toFixed(1) + '万';
+  return Number(n).toLocaleString();
+}
+</script>
+</body>
+</html>

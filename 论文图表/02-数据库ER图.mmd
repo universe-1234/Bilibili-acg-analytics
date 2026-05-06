@@ -1,0 +1,65 @@
+erDiagram
+    User ||--o{ Comment : 发表
+    User ||--o{ UserFavorite : 收藏
+    Video ||--o{ Comment : 包含
+    Video ||--o{ UserFavorite : 被收藏
+    Video ||--o{ VideoStatsHistory : 记录
+    Comment ||--o{ Comment : 回复
+
+    User {
+        int id PK
+        string username UK
+        string password_hash
+        string email UK
+        string nickname
+        string avatar_url
+        boolean is_active
+        datetime created_at
+    }
+
+    Video {
+        int id PK
+        string bv_id UK
+        string title
+        text description
+        string cover_url
+        int play_count
+        int like_count
+        int danmaku_count
+        int coin_count
+        int favorite_count
+        int share_count
+        int reply_count
+        string duration
+        string author_name
+        string category
+        string tags
+        datetime publish_date
+        string bilibili_url
+    }
+
+    Comment {
+        int id PK
+        int user_id FK
+        int video_id FK
+        text content
+        int parent_id FK
+        datetime created_at
+    }
+
+    UserFavorite {
+        int id PK
+        int user_id FK
+        int video_id FK
+        datetime created_at
+    }
+
+    VideoStatsHistory {
+        int id PK
+        int video_id FK
+        int play_count
+        int like_count
+        int danmaku_count
+        int favorite_count
+        datetime recorded_at
+    }
